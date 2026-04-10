@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Zyro Prints</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #111111; --white: #fafaf8; --accent: #E8441A;
+    --muted: #888880; --border: #e2e2de; --surface: #f4f4f0;
+    --font-display: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); background: var(--surface); color: var(--ink); min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .login-card {
+    background: white; border-radius: 20px; border: 1px solid var(--border);
+    padding: 40px; width: 100%; max-width: 380px;
+  }
+  .login-logo { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .login-logo span { color: var(--accent); }
+  .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-family: var(--font-body); font-size: 14px; color: var(--ink); outline: none; transition: border .2s; background: var(--white);
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--ink); }
+  .btn-primary { width: 100%; background: var(--ink); color: white; padding: 13px; border: none; border-radius: 8px; font-family: var(--font-display); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .2s; }
+  .btn-primary:hover { background: var(--accent); }
+  .login-hint { margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* ── LAYOUT ── */
+  #app { display: none; min-height: 100vh; }
+  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { background: var(--ink); color: white; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar-logo { font-family: var(--font-display); font-weight: 800; font-size: 16px; padding: 24px; border-bottom: 1px solid #222; }
+  .sidebar-logo span { color: var(--accent); }
+  .sidebar-logo small { display: block; font-size: 11px; font-weight: 400; color: #666; margin-top: 2px; font-family: var(--font-body); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 13px 24px; font-size: 13px; font-weight: 500; cursor: pointer; color: #888; transition: all .15s; border-left: 3px solid transparent; }
+  .nav-item:hover { background: #1a1a1a; color: white; }
+  .nav-item.active { background: #1a1a1a; color: white; border-left-color: var(--accent); }
+  .nav-item .ni { font-size: 16px; }
+  .sidebar-bottom { margin-top: auto; padding: 16px 0; border-top: 1px solid #222; }
+
+  /* ── MAIN ── */
+  .main { padding: 28px; overflow-y: auto; }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .page-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── METRIC CARDS ── */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .metric { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .metric-value { font-family: var(--font-display); font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+  .metric-change { font-size: 12px; margin-top: 4px; }
+  .up { color: #2E7D32; } .down { color: #C62828; } .warn { color: #E65100; }
+
+  /* ── CARD ── */
+  .card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+  .card-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 650px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; padding: 0 0 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 13px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .order-id { font-family: var(--font-display); font-size: 12px; font-weight: 700; }
+  .wa-link { color: #25D366; text-decoration: none; font-weight: 500; }
+  .wa-link:hover { text-decoration: underline; }
+
+  /* ── STATUS BADGE ── */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .b-pending   { background:#FFF3E0; color:#E65100; }
+  .b-confirmed { background:#E3F2FD; color:#1565C0; }
+  .b-printing  { background:#EDE7F6; color:#4527A0; }
+  .b-ready     { background:#E8F5E9; color:#2E7D32; }
+  .b-delivered { background:#F3E5F5; color:#6A1B9A; }
+  .b-cancelled { background:#FFEBEE; color:#C62828; }
+
+  /* ── STATUS SELECT ── */
+  .status-select { padding: 5px 10px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 12px; background: white; cursor: pointer; outline: none; font-family: var(--font-body); }
+  .status-select:focus { border-color: var(--ink); }
+
+  /* ── TOOLBAR ── */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .toolbar input, .toolbar select { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font-body); font-size: 13px; outline: none; background: white; }
+  .toolbar input { flex: 1; min-width: 180px; }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--ink); }
+  .btn-sm { padding: 9px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-body); transition: all .2s; }
+  .btn-dark { background: var(--ink); color: white; }
+  .btn-dark:hover { background: var(--accent); }
+  .btn-outline { background: none; border: 1.5px solid var(--border); color: var(--ink); }
+  .btn-outline:hover { border-color: var(--ink); }
+  .btn-danger { background: none; border: 1px solid #F09595; color: #A32D2D; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: var(--font-body); }
+  .btn-danger:hover { background: #FFEBEE; }
+
+  /* ── ORDER DETAIL MODAL ── */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-bg.open { display: flex; }
+  .modal { background: white; border-radius: 20px; padding: 32px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; }
+  .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+  .detail-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { font-size: 12px; color: var(--muted); min-width: 100px; padding-top: 1px; }
+  .detail-value { font-size: 13px; font-weight: 500; color: var(--ink); flex: 1; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: white; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 999; transform: translateY(80px); opacity: 0; transition: all .3s; max-width: 300px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* ── MOBILE ── */
+  .mobile-header { display: none; background: var(--ink); color: white; padding: 16px 20px; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .mobile-logo { font-family: var(--font-display); font-weight: 800; font-size: 16px; }
+  .mobile-logo span { color: var(--accent); }
+  .hamburger { background: none; border: none; color: white; font-size: 22px; cursor: pointer; }
+  .mobile-nav { display: none; background: var(--ink); padding: 8px 0 16px; }
+  .mobile-nav.open { display: block; }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .mobile-header { display: flex; }
+    .main { padding: 16px; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Zyro<span>Prints</span></div>
+    <div class="login-sub">Admin Panel — Sign in to continue</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="l-user" placeholder="Username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Login →</button>
+    
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <!-- Mobile header -->
+  <div class="mobile-header">
+    <div class="mobile-logo">Zyro<span>Prints</span> Admin</div>
+    <button class="hamburger" onclick="toggleMobileNav()">☰</button>
+  </div>
+  <div class="mobile-nav" id="mobile-nav">
+    <div class="nav-item active" onclick="switchTab('orders',this)"><span class="ni">📦</span> Orders</div>
+    <div class="nav-item" onclick="switchTab('dashboard',this)"><span class="ni">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="switchTab('customers',this)"><span class="ni">👥</span> Customers</div>
+    <div class="nav-item" onclick="goToSite()"><span class="ni">🌐</span> View Site</div>
+    <div class="nav-item" onclick="doLogout()"><span class="ni">🔒</span> Logout</div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        Zyro<span>Prints</span>
+        <small id="admin-name-display">Admin</small>
+      </div>
+      <div style="padding: 16px 0;">
+        <div class="nav-item active" onclick="switchTab('orders',this)"><span class="ni">📦</span> Orders</div>
+        <div class="nav-item" onclick="switchTab('dashboard',this)"><span class="ni">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="switchTab('customers',this)"><span class="ni">👥</span> Customers</div>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="nav-item" onclick="goToSite()"><span class="ni">🌐</span> View Site</div>
+        <div class="nav-item" onclick="doLogout()"><span class="ni">🔒</span> Logout</div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+      <!-- ── ORDERS TAB ── -->
+      <div id="tab-orders">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Orders</div>
+            <div class="page-sub" id="orders-sub">Loading...</div>
+          </div>
+          <button class="btn-sm btn-outline" onclick="exportCSV()">📤 Export CSV</button>
+        </div>
+
+        <div class="toolbar">
+          <input type="text" id="search-input" placeholder="Search name, phone, order ID..." oninput="loadOrders()">
+          <select id="filter-status" onchange="loadOrders()">
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="printing">Printing</option>
+            <option value="ready">Ready</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button class="btn-sm btn-dark" onclick="loadOrders()">↻ Refresh</button>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody">
+                <tr><td colspan="8"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading orders...</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DASHBOARD TAB ── -->
+      <div id="tab-dashboard" style="display:none;">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub" id="dash-date"></div>
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">Total Orders</div>
+            <div class="metric-value" id="m-total">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Pending</div>
+            <div class="metric-value warn" id="m-pending">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Printing</div>
+            <div class="metric-value" style="color:#4527A0" id="m-printing">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Delivered</div>
+            <div class="metric-value up" id="m-delivered">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Orders</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order ID</th><th>Customer</th><th>Product</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody id="recent-tbody">
+                <tr><td colspan="5"><div class="empty"><div class="empty-text">Loading...</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CUSTOMERS TAB ── -->
+      <div id="tab-customers" style="display:none;">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Customers</div>
+            <div class="page-sub">All customers who placed orders</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Orders</th><th>Last Order</th><th>Action</th></tr></thead>
+              <tbody id="customers-tbody">
+                <tr><td colspan="6"><div class="empty"><div class="empty-text">Loading...</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /layout -->
+</div><!-- /app -->
+
+<!-- ── ORDER DETAIL MODAL ── -->
+<div class="modal-bg" id="detail-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:800;margin-bottom:20px;" id="modal-title">Order Details</div>
+    <div id="modal-body"></div>
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API_URL = 'https://zyro-prints-production.up.railway.app';
+let token = localStorage.getItem('zyro_admin_token');
+let allOrders = [];
+
+// ── AUTH ──
+async function doLogin() {
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value.trim();
+  if (!username || !password) { toast('Enter username and password'); return; }
+
+  const btn = document.querySelector('.btn-primary');
+  btn.textContent = 'Logging in...';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(API_URL + '/api/admin/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      token = data.token;
+      localStorage.setItem('zyro_admin_token', token);
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('admin-name-display').textContent = data.username;
+      loadOrders();
+      toast('Welcome, ' + data.username + '! 👋');
+    } else {
+      toast('❌ ' + (data.error || 'Invalid credentials'));
+    }
+  } catch(e) {
+    toast('❌ Cannot connect to backend. Check Railway is running.');
+  }
+  btn.textContent = 'Login →';
+  btn.disabled = false;
+}
+
+function doLogout() {
+  token = null;
+  localStorage.removeItem('zyro_admin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-pass').value = '';
+}
+
+// Auto login if token exists
+if (token) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadOrders();
+}
+
+// ── TABS ──
+function switchTab(name, el) {
+  ['orders','dashboard','customers'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  if (el) {
+    el.classList.add('active');
+    // also activate matching sidebar item
+    document.querySelectorAll('.nav-item').forEach(i => {
+      if (i.textContent.trim().includes(el.textContent.trim().split(' ').pop())) i.classList.add('active');
+    });
+  }
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'customers') loadCustomers();
+  document.getElementById('mobile-nav').classList.remove('open');
+}
+
+function toggleMobileNav() {
+  document.getElementById('mobile-nav').classList.toggle('open');
+}
+
+function goToSite() {
+  window.open('https://zyroprints.netlify.app', '_blank');
+}
+
+// ── LOAD ORDERS ──
+async function loadOrders() {
+  const search = document.getElementById('search-input')?.value || '';
+  const status = document.getElementById('filter-status')?.value || 'all';
+
+  try {
+    const res = await fetch(API_URL + '/api/admin/orders?search=' + encodeURIComponent(search) + '&status=' + status, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (!data.success) { toast('Session expired. Please login again.'); doLogout(); return; }
+
+    allOrders = data.orders;
+    document.getElementById('orders-sub').textContent = data.orders.length + ' orders found';
+
+    const tbody = document.getElementById('orders-tbody');
+    if (!data.orders.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No orders found</div></div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.orders.map(o => `
+      <tr>
+        <td><span class="order-id">${o.order_id}</span></td>
+        <td>
+          <div style="font-weight:500">${o.name}</div>
+          <a class="wa-link" href="https://wa.me/91${o.phone.replace(/\D/g,'')}" target="_blank">📱 ${o.phone}</a>
+        </td>
+        <td>${o.product}</td>
+        <td>${o.quantity || '—'}</td>
+        <td style="font-size:12px;text-transform:capitalize">${o.payment_method || 'N/A'}</td>
+        <td>
+          <select class="status-select" onchange="updateStatus('${o.order_id}', this.value)">
+            ${['pending','confirmed','printing','ready','delivered','cancelled'].map(s =>
+              `<option value="${s}" ${o.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td style="font-size:12px;color:var(--muted)">${new Date(o.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn-sm btn-outline" style="padding:4px 10px;font-size:11px;" onclick="viewOrder('${o.order_id}')">View</button>
+          <button class="btn-danger" onclick="deleteOrder('${o.order_id}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    toast('❌ Failed to load orders');
+  }
+}
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  try {
+    const res = await fetch(API_URL + '/api/admin/orders?status=all', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    if (!data.success) return;
+
+    document.getElementById('m-total').textContent     = data.stats.total;
+    document.getElementById('m-pending').textContent   = data.stats.pending;
+    document.getElementById('m-printing').textContent  = data.stats.printing;
+    document.getElementById('m-delivered').textContent = data.stats.delivered;
+
+    const recent = data.orders.slice(0, 8);
+    document.getElementById('recent-tbody').innerHTML = recent.length ? recent.map(o => `
+      <tr>
+        <td><span class="order-id">${o.order_id}</span></td>
+        <td>${o.name}</td>
+        <td>${o.product}</td>
+        <td><span class="badge b-${o.status}">${o.status}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${new Date(o.created_at).toLocaleDateString('en-IN')}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="5"><div class="empty"><div class="empty-text">No orders yet</div></div></td></tr>';
+  } catch(e) { toast('❌ Failed to load dashboard'); }
+}
+
+// ── CUSTOMERS ──
+async function loadCustomers() {
+  try {
+    const res = await fetch(API_URL + '/api/admin/orders?status=all', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    if (!data.success) return;
+
+    // Group by phone
+    const map = {};
+    data.orders.forEach(o => {
+      if (!map[o.phone]) map[o.phone] = { name: o.name, phone: o.phone, email: o.email, count: 0, last: o.created_at };
+      map[o.phone].count++;
+      if (new Date(o.created_at) > new Date(map[o.phone].last)) map[o.phone].last = o.created_at;
+    });
+
+    const customers = Object.values(map).sort((a,b) => b.count - a.count);
+    document.getElementById('customers-tbody').innerHTML = customers.length ? customers.map(c => `
+      <tr>
+        <td style="font-weight:500">${c.name}</td>
+        <td><a class="wa-link" href="https://wa.me/91${c.phone.replace(/\D/g,'')}" target="_blank">📱 ${c.phone}</a></td>
+        <td style="font-size:12px;color:var(--muted)">${c.email || '—'}</td>
+        <td><span style="font-weight:700">${c.count}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${new Date(c.last).toLocaleDateString('en-IN')}</td>
+        <td><a class="wa-link" href="https://wa.me/91${c.phone.replace(/\D/g,'')}?text=Hi+${encodeURIComponent(c.name)}!+This+is+Zyro+Prints." target="_blank">Message</a></td>
+      </tr>
+    `).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-text">No customers yet</div></div></td></tr>';
+  } catch(e) { toast('❌ Failed to load customers'); }
+}
+
+// ── VIEW ORDER DETAIL ──
+function viewOrder(orderId) {
+  const o = allOrders.find(x => x.order_id === orderId);
+  if (!o) return;
+  document.getElementById('modal-title').textContent = orderId;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-row"><div class="detail-label">Customer</div><div class="detail-value">${o.name}</div></div>
+    <div class="detail-row"><div class="detail-label">Phone</div><div class="detail-value"><a class="wa-link" href="https://wa.me/91${o.phone.replace(/\D/g,'')}" target="_blank">${o.phone}</a></div></div>
+    <div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${o.email || '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Product</div><div class="detail-value">${o.product}</div></div>
+    <div class="detail-row"><div class="detail-label">Quantity</div><div class="detail-value">${o.quantity || '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Payment</div><div class="detail-value" style="text-transform:capitalize">${o.payment_method || '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Address</div><div class="detail-value">${o.address || '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Instructions</div><div class="detail-value" style="white-space:pre-wrap">${o.description || '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="badge b-${o.status}">${o.status}</span></div></div>
+    <div class="detail-row"><div class="detail-label">Placed on</div><div class="detail-value">${new Date(o.created_at).toLocaleString('en-IN')}</div></div>
+  `;
+  document.getElementById('modal-actions').innerHTML = `
+    <a href="https://wa.me/91${o.phone.replace(/\D/g,'')}?text=Hi+${encodeURIComponent(o.name)}!+Regarding+your+order+${o.order_id}+" target="_blank" class="btn-sm btn-dark" style="text-decoration:none;">💬 WhatsApp Customer</a>
+    <button class="btn-danger" style="padding:8px 14px;" onclick="deleteOrder('${o.order_id}');closeModal()">🗑 Delete Order</button>
+  `;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+
+// ── UPDATE STATUS ──
+async function updateStatus(orderId, status) {
+  try {
+    const res = await fetch(API_URL + '/api/admin/orders/' + orderId + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('✅ Status → ' + status + ' (customer notified by email)');
+      loadOrders();
+    } else { toast('❌ Failed to update'); }
+  } catch(e) { toast('❌ Cannot connect to backend'); }
+}
+
+// ── DELETE ORDER ──
+async function deleteOrder(orderId) {
+  if (!confirm('Delete order ' + orderId + '? This cannot be undone.')) return;
+  try {
+    const res = await fetch(API_URL + '/api/admin/orders/' + orderId, {
+      method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (data.success) { toast('🗑 Order deleted'); loadOrders(); }
+  } catch(e) { toast('❌ Failed to delete'); }
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  if (!allOrders.length) { toast('No orders to export'); return; }
+  const headers = ['Order ID','Name','Phone','Email','Product','Qty','Payment','Status','Address','Date'];
+  const rows = allOrders.map(o => [
+    o.order_id, o.name, o.phone, o.email || '', o.product,
+    o.quantity || '', o.payment_method || '', o.status,
+    (o.address || '').replace(/,/g,' '),
+    new Date(o.created_at).toLocaleDateString('en-IN')
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'zyroprints-orders-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('✅ CSV exported!');
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
